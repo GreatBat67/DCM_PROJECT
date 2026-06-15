@@ -1,0 +1,14 @@
+-- Serve layer: Consumption view for BI/end users
+
+DEFINE VIEW {{db}}.SERVE.V_CUSTOMER_360
+AS
+SELECT
+    CUSTOMER_ID,
+    FIRST_NAME,
+    LAST_NAME,
+    EMAIL,
+    TOTAL_ORDERS,
+    LIFETIME_VALUE,
+    FIRST_ORDER_DATE,
+    LAST_ORDER_DATE
+FROM {{db}}.ANALYTICS.CUSTOMER_ORDERS;
