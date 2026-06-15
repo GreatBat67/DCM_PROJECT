@@ -1,0 +1,139 @@
+name: DCM CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'manifest.yml'
+      - 'sources/**'
+  push:
+    branches: [main, develop, test]
+    paths:
+      - 'manifest.yml'
+      - 'sources/**'
+
+env:
+  SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+  SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+  SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+
+jobs:
+  validate:
+    name: Analyze & Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Snowflake CLI
+        run: pip install snowflake-cli
+
+      - name: Configure connection
+        run: |
+          mkdir -p ~/.snowflake
+          cat > ~/.snowflake/config.toml <<EOF
+          [connections.default]
+          account = "$SNOWFLAKE_ACCOUNT"
+          user = "$SNOWFLAKE_USER"
+          password = "$SNOWFLAKE_PASSWORD"
+          role = "$SNOWFLAKE_ROLE"
+          warehouse = "$SNOWFLAKE_WAREHOUSE"
+          EOF
+          chmod 600 ~/.snowflake/config.toml
+
+      - name: Verify connection
+        run: snow sql -q "SELECT CURRENT_ROLE() AS ROLE, CURRENT_WAREHOUSE() AS WAREHOUSE" -c default
+
+      - name: Analyze DEV
+        run: snow dcm raw-analyze CICD_DB.MAIN.PIPELINE_DEV -c default --target DEV
+
+  deploy-dev:
+    name: Deploy DEV
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Snowflake CLI
+        run: pip install snowflake-cli
+
+      - name: Configure connection
+        run: |
+          mkdir -p ~/.snowflake
+          cat > ~/.snowflake/config.toml <<EOF
+          [connections.default]
+          account = "$SNOWFLAKE_ACCOUNT"
+          user = "$SNOWFLAKE_USER"
+          password = "$SNOWFLAKE_PASSWORD"
+          role = "$SNOWFLAKE_ROLE"
+          warehouse = "$SNOWFLAKE_WAREHOUSE"
+          EOF
+          chmod 600 ~/.snowflake/config.toml
+
+      - name: Plan DEV
+        run: snow dcm plan CICD_DB.MAIN.PIPELINE_DEV -c default --target DEV
+
+      - name: Deploy DEV
+        run: snow dcm deploy CICD_DB.MAIN.PIPELINE_DEV -c default --target DEV --alias "dev-${{ github.sha }}"
+
+  deploy-test:
+    name: Deploy TEST
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/test'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Snowflake CLI
+        run: pip install snowflake-cli
+
+      - name: Configure connection
+        run: |
+          mkdir -p ~/.snowflake
+          cat > ~/.snowflake/config.toml <<EOF
+          [connections.default]
+          account = "$SNOWFLAKE_ACCOUNT"
+          user = "$SNOWFLAKE_USER"
+          password = "$SNOWFLAKE_PASSWORD"
+          role = "$SNOWFLAKE_ROLE"
+          warehouse = "$SNOWFLAKE_WAREHOUSE"
+          EOF
+          chmod 600 ~/.snowflake/config.toml
+
+      - name: Plan TEST
+        run: snow dcm plan CICD_DB.MAIN.PIPELINE_TEST -c default --target TEST
+
+      - name: Deploy TEST
+        run: snow dcm deploy CICD_DB.MAIN.PIPELINE_TEST -c default --target TEST --alias "test-${{ github.sha }}"
+
+  deploy-prod:
+    name: Deploy PROD
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Snowflake CLI
+        run: pip install snowflake-cli
+
+      - name: Configure connection
+        run: |
+          mkdir -p ~/.snowflake
+          cat > ~/.snowflake/config.toml <<EOF
+          [connections.default]
+          account = "$SNOWFLAKE_ACCOUNT"
+          user = "$SNOWFLAKE_USER"
+          password = "$SNOWFLAKE_PASSWORD"
+          role = "$SNOWFLAKE_ROLE"
+          warehouse = "$SNOWFLAKE_WAREHOUSE"
+          EOF
+          chmod 600 ~/.snowflake/config.toml
+
+      - name: Plan PROD
+        run: snow dcm plan CICD_DB.MAIN.PIPELINE_PROD -c default --target PROD
+
+      - name: Deploy PROD
+        run: snow dcm deploy CICD_DB.MAIN.PIPELINE_PROD -c default --target PROD --alias "prod-${{ github.sha }}"
