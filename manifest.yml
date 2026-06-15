@@ -1,0 +1,39 @@
+manifest_version: 2
+type: DCM_PROJECT
+default_target: 'DEV'
+
+targets:
+  DEV:
+    account_identifier: gva67944
+    project_name: 'CICD_DB.MAIN.PIPELINE_DEV'
+    project_owner: PSEUDO_SYSADMIN
+    templating_config: 'DEV'
+  TEST:
+    account_identifier: gva67944
+    project_name: 'CICD_DB.MAIN.PIPELINE_TEST'
+    project_owner: PSEUDO_SYSADMIN
+    templating_config: 'TEST'
+  PROD:
+    account_identifier: gva67944
+    project_name: 'CICD_DB.MAIN.PIPELINE_PROD'
+    project_owner: PSEUDO_SYSADMIN
+    templating_config: 'PROD'
+
+templating:
+  defaults:
+    env_suffix: '_DEV'
+    wh_size: 'XSMALL'
+    db: 'PIPELINE_DB_DEV'
+  configurations:
+    DEV:
+      env_suffix: '_DEV'
+      wh_size: 'XSMALL'
+      db: 'PIPELINE_DB_DEV'
+    TEST:
+      env_suffix: '_TEST'
+      wh_size: 'SMALL'
+      db: 'PIPELINE_DB_TEST'
+    PROD:
+      env_suffix: ''
+      wh_size: 'MEDIUM'
+      db: 'PIPELINE_DB'
